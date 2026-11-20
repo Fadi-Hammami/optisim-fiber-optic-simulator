@@ -1,0 +1,150 @@
+=====================================================================
+OPTISIM - Simulateur de liaison par fibre optique (Flask / Python)
+=====================================================================
+
+DESCRIPTION COURTE (pour le champ "Description" de GitHub)
+----------------------------------------------------------
+Simulateur web de liaison par fibre optique : bilan de puissance, dispersion chromatique, impulsion gaussienne et verdict automatique (Flask).
+
+
+PRÉSENTATION
+------------
+OPTISIM est une application web qui simule une liaison optique
+point-à-point entre un émetteur et un récepteur. L'utilisateur saisit les
+paramètres de la liaison (émetteur, fibre, épissures, connecteurs,
+récepteur) et obtient instantanément :
+
+  - le bilan de puissance (en dBm),
+  - le bilan de dispersion et la bande passante,
+  - la courbe temporelle de l'impulsion (style OptiSystem),
+  - un schéma interactif de la liaison,
+  - le verdict : liaison fonctionnelle ou non.
+
+Le calcul est réalisé côté serveur avec Flask (Python). L'affichage est
+réalisé dans le navigateur avec HTML, CSS et JavaScript (graphiques
+dessinés avec l'élément Canvas, sans bibliothèque externe).
+
+
+ARCHITECTURE DE LA LIAISON SIMULÉE
+----------------------------------
+  [ÉMETTEUR] -C1- [===== FIBRE + ÉPISSURES =====] -C2- [RÉCEPTEUR]
+
+  - Émetteur   : longueur d'onde λ, puissance émise Ptx, largeur
+                 spectrale Δλ, type de codage (NRZ ou RZ).
+  - 2 connecteurs : C1 (émetteur / fibre) et C2 (fibre / récepteur).
+  - Fibre      : type de fibre, longueur L, atténuation α, dispersion
+                 chromatique D.
+  - Épissures  : N épissures réparties uniformément sur la fibre,
+                 avec une perte par épissure.
+  - Récepteur  : sensibilité S, puissance minimale Pmin, débit.
+
+
+TYPES DE FIBRES PRIS EN CHARGE
+------------------------------
+  - Monomode (SMF G.652)
+  - FSI - Zéro dispersion décalée (G.653)
+  - FGI - Dispersion décalée non nulle (G.655)
+
+  Pour les fibres FSI et FGI, la dispersion intermodale est calculée à
+  partir de l'indice de réfraction n et de la différence relative
+  d'indice Δ.
+
+
+FORMULES UTILISÉES
+------------------
+Bilan de puissance :
+  Perte fibre        = α × L
+  Perte épissures    = N × perte par épissure
+  Perte connecteurs  = 2 × perte par connecteur
+  Perte totale       = somme des trois pertes
+  Prx (dBm)          = Ptx - perte totale
+  Marge (dB)         = Prx - S
+
+Dispersion :
+  Dispersion chromatique : σchrom = |D| × L × Δλ
+  Dispersion intermodale :
+      FSI      : Δτ = (n / c) × Δ × L
+      FGI      : Δτ = (n / 8c) × Δ² × L
+      Monomode : 0
+  Dispersion totale : sqrt(Δτ² + σchrom²)
+  Bande passante    : k / dispersion totale
+                      (k = 0,7 pour NRZ, k = 0,5 pour RZ)
+
+Courbe temporelle :
+  Impulsion gaussienne dont la largeur initiale est T_bit / 4.
+  Elle s'élargit avec la dispersion : de D = 0 (impulsion initiale)
+  jusqu'à la valeur réelle de D, avec 4 courbes intermédiaires.
+
+
+CRITÈRE DE FONCTIONNEMENT
+-------------------------
+La liaison est déclarée fonctionnelle si :
+      Prx >= S   ET   Prx >= Pmin
+Le verdict est donc déterminé par le bilan de puissance. Les résultats de
+dispersion (dispersion totale, bande passante, élargissement de
+l'impulsion) sont affichés à titre d'analyse complémentaire.
+
+
+FONCTIONNALITÉS DE L'INTERFACE
+------------------------------
+  - Formulaire de saisie complet des paramètres de la liaison.
+  - Remplissage automatique de α et D selon le type de fibre et la
+    longueur d'onde.
+  - Validation des entrées avec messages d'erreur (L > 0, débit > 0,
+    Δλ > 0, sensibilité < Ptx, etc.).
+  - Schéma de la liaison avec connecteurs et épissures.
+  - Courbe de puissance le long de la fibre.
+  - Courbe temporelle de l'impulsion avec élargissement.
+  - Graphique circulaire de répartition des pertes.
+  - Indicateur de statut de la liaison.
+
+
+STRUCTURE DU PROJET
+-------------------
+  optisim_new/
+  |-- app.py              Backend Flask : calculs et routes (/ et /simulate)
+  |-- templates/
+  |   +-- index.html      Page principale
+  |-- static/
+  |   |-- style.css       Mise en forme
+  |   +-- script.js       Appels API et dessin des graphiques (Canvas)
+  |-- requirements.txt    Dépendances Python (flask)
+  +-- README.md           Documentation
+
+
+INSTALLATION ET LANCEMENT (Windows / VS Code)
+---------------------------------------------
+  1. Ouvrir le dossier optisim_new dans VS Code.
+  2. Ouvrir le terminal (Ctrl + ù) puis :
+
+       python -m venv venv
+       venv\Scripts\activate
+       pip install -r requirements.txt
+       python app.py
+
+  3. Ouvrir http://localhost:5000 dans le navigateur.
+
+
+API
+---
+  GET  /           Page principale de l'application.
+  POST /simulate   Reçoit les paramètres de la liaison (JSON) et renvoie
+                   les bilans, les courbes et le verdict (JSON).
+
+
+PISTES D'AMÉLIORATION
+---------------------
+  - Intégrer le critère de dispersion (σ < T_bit / 4) dans le verdict.
+  - Ajouter l'export des résultats en PDF ou CSV.
+  - Ajouter d'autres types de fibres et de sources.
+  - Ajouter un calcul du taux d'erreur binaire (BER).
+
+
+OUTILS ET TECHNOLOGIES
+----------------------
+  Python | Flask | HTML5 | CSS3 | JavaScript | Canvas | API REST (JSON)
+
+
+AUTEUR
+------
+  Fadi Hammami

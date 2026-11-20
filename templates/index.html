@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPTISIM — Simulateur Liaison Fibre Optique</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ─── SCAN LINE OVERLAY ─── -->
+<div class="scanlines"></div>
+
+<!-- ─── HEADER ─── -->
+<header>
+  <div class="header-inner">
+    <div class="logo-block">
+      <span class="logo-icon">◈</span>
+      <div>
+        <div class="logo-title">OPTISIM</div>
+        <div class="logo-sub">Simulateur de Liaison Fibre Optique</div>
+      </div>
+    </div>
+    <div class="status-bar">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusLabel">EN ATTENTE</span>
+    </div>
+  </div>
+</header>
+
+<!-- ─── MAIN LAYOUT ─── -->
+<main>
+  <div class="grid-layout">
+
+    <!-- ══════════════════════ PANNEAU GAUCHE : PARAMÈTRES ══════════════════════ -->
+    <aside class="panel params-panel">
+      <div class="panel-header">⚙ PARAMÈTRES DE LIAISON</div>
+
+      <!-- ÉMETTEUR -->
+      <div class="section-tag">ÉMETTEUR</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Longueur d'onde λ (nm)</label>
+          <input type="number" id="lambda_nm" value="1310" step="1" min="800" max="1700" onchange="onLambdaChange()" />
+        </div>
+        <div class="field">
+          <label>Puissance émise P<sub>tx</sub> (dBm)</label>
+          <input type="number" id="P_tx" value="-5" step="0.1" />
+        </div>
+        <div class="field">
+          <label>Largeur spectrale Δλ (nm)</label>
+          <input type="number" id="delta_lambda" value="1" step="0.1" min="0.01" />
+        </div>
+        <div class="field">
+          <label>Type de codage</label>
+          <select id="type_codage">
+            <option value="NRZ">NRZ (k = 0.7)</option>
+            <option value="RZ">RZ (k = 0.5)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- FIBRE OPTIQUE -->
+      <div class="section-tag">FIBRE OPTIQUE</div>
+      <div class="field-grid">
+        <div class="field full">
+          <label>Type de fibre</label>
+          <select id="type_fibre" onchange="onFibreTypeChange()">
+            <option value="Monomode (SMF-G.652)">Monomode (SMF-G.652)</option>
+            <option value="FSI — Zéro dispersion décalée (G.653)">FSI — Zéro disp. décalée (G.653)</option>
+            <option value="FGI — Dispersion décalée non nulle (G.655)">FGI — Disp. décalée non nulle (G.655)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Longueur L (km)</label>
+          <input type="number" id="L" value="50" step="1" min="0.1" />
+        </div>
+        <div class="field">
+          <label>Atténuation α (dB/km)</label>
+          <input type="number" id="alpha" value="0.35" step="0.01" min="0" />
+        </div>
+        <div class="field full" id="D_field_wrap">
+          <label id="D_label">Dispersion chromatique D (ps/nm/km)</label>
+          <input type="number" id="D" value="17" step="0.1" />
+          <div class="field-hint" id="D_hint"></div>
+        </div>
+        <!-- Champs intermodaux — visibles uniquement pour FSI/FGI -->
+        <div class="field full" id="intermodal_fields" style="display:none;">
+          <div class="field-grid" style="padding:0; margin-top:6px;">
+            <div class="field">
+              <label>Indice de réfraction n</label>
+              <input type="number" id="n_fibre" value="1.46" step="0.001" min="1" max="2" />
+            </div>
+            <div class="field">
+              <label>Différence relative d'indice Δ</label>
+              <input type="number" id="delta_relative" value="0.01" step="0.001" min="0.0001" max="0.5" />
+            </div>
+          </div>
+          <div class="field-hint" id="intermodal_hint" style="margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- ÉPISSURES & CONNECTEURS -->
+      <div class="section-tag">ÉPISSURES &amp; CONNECTEURS</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Nombre d'épissures</label>
+          <input type="number" id="nb_ep" value="3" step="1" min="0" />
+        </div>
+        <div class="field">
+          <label>Perte / épissure (dB)</label>
+          <input type="number" id="perte_ep" value="0.1" step="0.01" min="0" />
+        </div>
+        <div class="field full">
+          <label>Perte / connecteur (dB) <span class="tag-2conn">×2</span></label>
+          <input type="number" id="perte_conn" value="0.5" step="0.01" min="0" />
+        </div>
+      </div>
+
+      <!-- RÉCEPTEUR -->
+      <div class="section-tag">RÉCEPTEUR</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Sensibilité S (dBm)</label>
+          <input type="number" id="sensibilite" value="-30" step="0.1" />
+        </div>
+        <div class="field">
+          <label>Puissance min. P<sub>min</sub> (dBm)</label>
+          <input type="number" id="P_min" value="-35" step="0.1" />
+        </div>
+        <div class="field full">
+          <label>Débit (Gbps)</label>
+          <input type="number" id="debit" value="2.5" step="0.1" min="0.001" />
+        </div>
+      </div>
+
+      <!-- ERROR BOX -->
+      <div id="errorBox" class="error-box" style="display:none;"></div>
+
+      <button class="sim-btn" id="simBtn" onclick="simulate()">
+        <span class="btn-icon">▶</span> SIMULER LA LIAISON
+      </button>
+    </aside>
+
+    <!-- ══════════════════════ PANNEAU DROIT : RÉSULTATS ══════════════════════ -->
+    <div class="results-col">
+
+      <!-- VERDICT -->
+      <div class="panel verdict-panel" id="verdictPanel">
+        <div class="verdict-idle">
+          <div class="idle-icon">◎</div>
+          <div class="idle-text">Lancez une simulation pour voir les résultats</div>
+        </div>
+      </div>
+
+      <!-- SCHEMA DE LIAISON -->
+      <div class="panel schema-panel">
+        <div class="panel-header">◈ SCHÉMA DE LA LIAISON</div>
+        <canvas id="schemaCanvas" width="900" height="160"></canvas>
+      </div>
+
+      <!-- COURBE TEMPORELLE -->
+      <div class="panel chart-panel">
+        <div class="panel-header">◈ COURBE TEMPORELLE — ÉLARGISSEMENT PAR DISPERSION CHROMATIQUE</div>
+        <canvas id="temporalCanvas" width="900" height="300"></canvas>
+      </div>
+
+      <!-- BILAN DÉTAILLÉ -->
+      <div class="bilan-row">
+        <div class="panel bilan-panel">
+          <div class="panel-header">◈ BILAN DE PUISSANCE</div>
+          <div id="bilanPuissance" class="bilan-content">—</div>
+        </div>
+        <div class="panel bilan-panel">
+          <div class="panel-header">◈ BILAN DE DISPERSION</div>
+          <div id="bilanDispersion" class="bilan-content">—</div>
+        </div>
+        <div class="panel bilan-panel">
+          <div class="panel-header">◈ RÉPARTITION DES PERTES</div>
+          <canvas id="pieCanvas" width="220" height="200"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
